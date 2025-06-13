@@ -1,3 +1,4 @@
+```mermaid
 erDiagram
     CLIENT {
         int client_id PK
@@ -5,6 +6,7 @@ erDiagram
         string phone
     }
     CLIENT ||--o{ ORDER : "оформляет"
+    
     ORDER {
         int order_id PK
         date order_date
@@ -39,3 +41,4 @@ erDiagram
         datetime start_time
     }
     SESSION }|--|| HALL : "проводится_в"
+```
