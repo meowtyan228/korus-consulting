@@ -20,7 +20,7 @@
       </extensionElements>
     </serviceTask>
     <serviceTask id="NotifyCreated" name="Отправить подтверждение записи" />
-    <intermediateCatchEvent id="WaitBeforeConfirm" name="Ожидание до 2 дней до приёма">
+    <intermediateCatchEvent id="WaitBeforeConfirm" name="За 2 дня до приёма">
       <timerEventDefinition>
         <timeDate>${appointmentDate.minusDays(2)}</timeDate>
       </timerEventDefinition>
@@ -89,7 +89,7 @@
       <bpmndi:BPMNShape id="WaitBeforeConfirm_di" bpmnElement="WaitBeforeConfirm">
         <dc:Bounds x="980" y="245" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="957" y="281" width="83" height="27" />
+          <dc:Bounds x="968" y="284" width="60" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="NotifyConfirmRequest_di" bpmnElement="NotifyConfirmRequest">
@@ -104,6 +104,9 @@
           <dc:Bounds x="1416" y="128" width="67" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cancel_di" bpmnElement="Cancel">
+        <dc:Bounds x="1370" y="290" width="120" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndConfirmed_di" bpmnElement="EndConfirmed">
         <dc:Bounds x="1572" y="172" width="36" height="36" />
         <bpmndi:BPMNLabel>
@@ -116,15 +119,18 @@
           <dc:Bounds x="1545" y="323" width="90" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Cancel_di" bpmnElement="Cancel">
-        <dc:Bounds x="1370" y="290" width="120" height="80" />
+      <bpmndi:BPMNShape id="ResponseTimeout_di" bpmnElement="ResponseTimeout">
+        <dc:Bounds x="1302" y="212" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1260" y="320" width="80" height="20" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_Online_di" bpmnElement="Flow_Online">
         <di:waypoint x="250" y="143" />
         <di:waypoint x="250" y="120" />
         <di:waypoint x="350" y="120" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="277" y="101" width="40" height="14" />
+          <dc:Bounds x="286" y="101" width="40" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Offline_di" bpmnElement="Flow_Offline">
@@ -132,7 +138,7 @@
         <di:waypoint x="250" y="270" />
         <di:waypoint x="380" y="270" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="280" y="256" width="52" height="14" />
+          <dc:Bounds x="280" y="273" width="52" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Start_di" bpmnElement="Flow_Start">
@@ -183,6 +189,11 @@
       <bpmndi:BPMNEdge id="Flow_Response_di" bpmnElement="Flow_Response">
         <di:waypoint x="1370" y="190" />
         <di:waypoint x="1425" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Timeout_di" bpmnElement="Flow_Timeout">
+        <di:waypoint x="1320" y="248" />
+        <di:waypoint x="1320" y="330" />
+        <di:waypoint x="1370" y="330" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Confirmed_di" bpmnElement="Flow_Confirmed">
         <di:waypoint x="1475" y="190" />
