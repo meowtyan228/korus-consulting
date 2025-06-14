@@ -1,229 +1,210 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" targetNamespace="http://example.com/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.6.1">
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_1" targetNamespace="http://example.com/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.6.1">
   <process id="AppointmentProcess" name="Запись к врачу" isExecutable="true">
     <startEvent id="StartEvent" name="Начало" />
     <exclusiveGateway id="Gateway1" name="Выбор способа записи" />
+    <sequenceFlow id="Flow_Online" name="Онлайн" sourceRef="Gateway1" targetRef="Auth">
+      <conditionExpression xsi:type="tFormalExpression">${method == 'online'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_Offline" name="Оффлайн" sourceRef="Gateway1" targetRef="Call">
+      <conditionExpression xsi:type="tFormalExpression">${method == 'offline'}</conditionExpression>
+    </sequenceFlow>
     <userTask id="Auth" name="Авторизация" />
-    <userTask id="Choose" name="Выбор врача/даты" />
-    <userTask id="Call" name="Звонок" />
+    <userTask id="Choose" name="Выбор врача и даты" />
+    <userTask id="Call" name="Звонок в регистратуру" />
     <serviceTask id="Save" name="Создание записи в БД">
       <extensionElements>
         <camunda:inputOutput>
-          <camunda:outputParameter name="appointmentDate">${датаПриёма}</camunda:outputParameter>
+          <camunda:outputParameter name="appointmentDate">${appointmentDate}</camunda:outputParameter>
         </camunda:inputOutput>
       </extensionElements>
     </serviceTask>
-    <serviceTask id="NotifyCreated" name="Уведомление: запись создана" />
+    <serviceTask id="NotifyCreated" name="Отправить подтверждение записи" />
     <intermediateCatchEvent id="WaitBeforeConfirm" name="Ожидание до 2 дней до приёма">
       <timerEventDefinition>
         <timeDate>${appointmentDate.minusDays(2)}</timeDate>
       </timerEventDefinition>
     </intermediateCatchEvent>
-    <serviceTask id="NotifyConfirmRequest" name="Запрос подтверждения" />
-    <userTask id="WaitForResponse" name="Ожидание ответа пациента" />
-    <exclusiveGateway id="Gateway_TimeoutCheck" name="Ответ получен?" />
-    <intermediateCatchEvent id="ResponseTimeout" name="Таймаут 24ч">
+    <serviceTask id="NotifyConfirmRequest" name="Отправить запрос подтверждения" />
+    <userTask id="WaitForResponse" name="Ожидание ответа пациента">
+      <extensionElements>
+        <camunda:formField id="confirmation" type="radio">
+          <camunda:value>confirm</camunda:value>
+          <camunda:value>cancel</camunda:value>
+        </camunda:formField>
+      </extensionElements>
+    </userTask>
+    <boundaryEvent id="ResponseTimeout" attachedToRef="WaitForResponse">
       <timerEventDefinition>
         <timeDuration>PT24H</timeDuration>
       </timerEventDefinition>
-    </intermediateCatchEvent>
+    </boundaryEvent>
     <exclusiveGateway id="Confirm" name="Пациент подтвердил?" />
-    <serviceTask id="Cancel" name="Отмена записи" />
-    <endEvent id="End1" name="Запись подтверждена" />
-    <endEvent id="End2" name="Запись аннулирована" />
-    <sequenceFlow id="flow1" sourceRef="StartEvent" targetRef="Gateway1" />
-    <sequenceFlow id="flow2" name="Онлайн" sourceRef="Gateway1" targetRef="Auth" />
-    <sequenceFlow id="flow3" name="Оффлайн" sourceRef="Gateway1" targetRef="Call" />
-    <sequenceFlow id="flow4" sourceRef="Auth" targetRef="Choose" />
-    <sequenceFlow id="flow5" sourceRef="Choose" targetRef="Save" />
-    <sequenceFlow id="flow6" sourceRef="Call" targetRef="Save" />
-    <sequenceFlow id="flowNotifyCreated" sourceRef="Save" targetRef="NotifyCreated" />
-    <sequenceFlow id="flowWaitBeforeConfirm" sourceRef="NotifyCreated" targetRef="WaitBeforeConfirm" />
-    <sequenceFlow id="flowNotifyConfirmRequest" sourceRef="WaitBeforeConfirm" targetRef="NotifyConfirmRequest" />
-    <sequenceFlow id="flowToWait" sourceRef="NotifyConfirmRequest" targetRef="WaitForResponse" />
-    <sequenceFlow id="flowToGateway" sourceRef="WaitForResponse" targetRef="Gateway_TimeoutCheck" />
-    <sequenceFlow id="flowTimeout" sourceRef="Gateway_TimeoutCheck" targetRef="ResponseTimeout" />
-    <sequenceFlow id="flowToConfirm" sourceRef="Gateway_TimeoutCheck" targetRef="Confirm" />
-    <sequenceFlow id="flowAfterTimeout" sourceRef="ResponseTimeout" targetRef="Cancel" />
-    <sequenceFlow id="flow9" name="Да" sourceRef="Confirm" targetRef="End1" />
-    <sequenceFlow id="flow10" name="Нет" sourceRef="Confirm" targetRef="Cancel" />
-    <sequenceFlow id="flow14" sourceRef="Cancel" targetRef="End2" />
+    <serviceTask id="Cancel" name="Отменить запись" />
+    <endEvent id="EndConfirmed" name="Запись подтверждена" />
+    <endEvent id="EndCancelled" name="Запись отменена" />
+    <sequenceFlow id="Flow_Start" sourceRef="StartEvent" targetRef="Gateway1" />
+    <sequenceFlow id="Flow_Auth" sourceRef="Auth" targetRef="Choose" />
+    <sequenceFlow id="Flow_Choose" sourceRef="Choose" targetRef="Save" />
+    <sequenceFlow id="Flow_Call" sourceRef="Call" targetRef="Save" />
+    <sequenceFlow id="Flow_Save" sourceRef="Save" targetRef="NotifyCreated" />
+    <sequenceFlow id="Flow_Notify" sourceRef="NotifyCreated" targetRef="WaitBeforeConfirm" />
+    <sequenceFlow id="Flow_Wait" sourceRef="WaitBeforeConfirm" targetRef="NotifyConfirmRequest" />
+    <sequenceFlow id="Flow_Request" sourceRef="NotifyConfirmRequest" targetRef="WaitForResponse" />
+    <sequenceFlow id="Flow_Response" sourceRef="WaitForResponse" targetRef="Confirm" />
+    <sequenceFlow id="Flow_Timeout" sourceRef="ResponseTimeout" targetRef="Cancel" />
+    <sequenceFlow id="Flow_Confirmed" name="Да" sourceRef="Confirm" targetRef="EndConfirmed" />
+    <sequenceFlow id="Flow_Rejected" name="Нет" sourceRef="Confirm" targetRef="Cancel" />
+    <sequenceFlow id="Flow_Cancel" sourceRef="Cancel" targetRef="EndCancelled" />
   </process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_Appointment">
-    <bpmndi:BPMNPlane id="BPMNPlane_Appointment" bpmnElement="AppointmentProcess">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="AppointmentProcess">
+      <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent">
+        <dc:Bounds x="142" y="150" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="141" y="186" width="39" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway1_di" bpmnElement="Gateway1" isMarkerVisible="true">
+        <dc:Bounds x="225" y="143" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="275" y="172" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Auth_di" bpmnElement="Auth">
-        <dc:Bounds x="360" y="80" width="100" height="80" />
+        <dc:Bounds x="350" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Choose_di" bpmnElement="Choose">
-        <dc:Bounds x="520" y="100" width="100" height="80" />
+        <dc:Bounds x="520" y="80" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Confirm_di" bpmnElement="Confirm" isMarkerVisible="true">
-        <dc:Bounds x="1400" y="170" width="50" height="50" />
+      <bpmndi:BPMNShape id="Call_di" bpmnElement="Call">
+        <dc:Bounds x="380" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Save_di" bpmnElement="Save">
+        <dc:Bounds x="640" y="200" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NotifyCreated_di" bpmnElement="NotifyCreated">
+        <dc:Bounds x="800" y="128" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="WaitBeforeConfirm_di" bpmnElement="WaitBeforeConfirm">
+        <dc:Bounds x="980" y="245" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1391" y="132.5" width="67" height="27" />
+          <dc:Bounds x="957" y="281" width="83" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="NotifyConfirmRequest_di" bpmnElement="NotifyConfirmRequest">
-        <dc:Bounds x="1020" y="230" width="140" height="80" />
+        <dc:Bounds x="1070" y="180" width="140" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End2_di" bpmnElement="End2">
-        <dc:Bounds x="1622" y="342" width="36" height="36" />
+      <bpmndi:BPMNShape id="WaitForResponse_di" bpmnElement="WaitForResponse">
+        <dc:Bounds x="1270" y="150" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Confirm_di" bpmnElement="Confirm" isMarkerVisible="true">
+        <dc:Bounds x="1425" y="165" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1603" y="378" width="74" height="27" />
+          <dc:Bounds x="1416" y="128" width="67" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="ResponseTimeout_di" bpmnElement="ResponseTimeout">
-        <dc:Bounds x="1307" y="362" width="36" height="36" />
+      <bpmndi:BPMNShape id="EndConfirmed_di" bpmnElement="EndConfirmed">
+        <dc:Bounds x="1572" y="172" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1293" y="398" width="64" height="14" />
+          <dc:Bounds x="1552" y="216" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndCancelled_di" bpmnElement="EndCancelled">
+        <dc:Bounds x="1572" y="280" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1545" y="323" width="90" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Cancel_di" bpmnElement="Cancel">
-        <dc:Bounds x="1440" y="290" width="120" height="80" />
+        <dc:Bounds x="1370" y="290" width="120" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End1_di" bpmnElement="End1">
-        <dc:Bounds x="1552" y="177" width="36" height="36" />
+      <bpmndi:BPMNEdge id="Flow_Online_di" bpmnElement="Flow_Online">
+        <di:waypoint x="250" y="143" />
+        <di:waypoint x="250" y="120" />
+        <di:waypoint x="350" y="120" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1532" y="216" width="75" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_TimeoutCheck_di" bpmnElement="Gateway_TimeoutCheck" isMarkerVisible="true">
-        <dc:Bounds x="1300" y="173" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1284" y="149" width="81" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="WaitForResponse_di" bpmnElement="WaitForResponse">
-        <dc:Bounds x="1180" y="230" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway1_di" bpmnElement="Gateway1" isMarkerVisible="true">
-        <dc:Bounds x="225" y="170" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="285" y="203" width="80" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_di" bpmnElement="StartEvent">
-        <dc:Bounds x="142" y="175" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="141" y="211" width="39" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Call_di" bpmnElement="Call">
-        <dc:Bounds x="360" y="250" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Save_di" bpmnElement="Save">
-        <dc:Bounds x="650" y="210" width="120" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="NotifyCreated_di" bpmnElement="NotifyCreated">
-        <dc:Bounds x="830" y="230" width="140" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="WaitBeforeConfirm_di" bpmnElement="WaitBeforeConfirm">
-        <dc:Bounds x="972" y="362" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="948" y="408" width="83" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="flow1_di" bpmnElement="flow1">
-        <di:waypoint x="178" y="194" />
-        <di:waypoint x="227" y="193" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flow2_di" bpmnElement="flow2">
-        <di:waypoint x="250" y="170" />
-        <di:waypoint x="250" y="110" />
-        <di:waypoint x="360" y="110" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="282" y="83" width="40" height="14" />
+          <dc:Bounds x="277" y="101" width="40" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flow3_di" bpmnElement="flow3">
-        <di:waypoint x="250" y="220" />
-        <di:waypoint x="250" y="290" />
-        <di:waypoint x="360" y="290" />
+      <bpmndi:BPMNEdge id="Flow_Offline_di" bpmnElement="Flow_Offline">
+        <di:waypoint x="250" y="193" />
+        <di:waypoint x="250" y="270" />
+        <di:waypoint x="380" y="270" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="268" y="263" width="52" height="14" />
+          <dc:Bounds x="280" y="256" width="52" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flow4_di" bpmnElement="flow4">
-        <di:waypoint x="460" y="120" />
-        <di:waypoint x="490" y="120" />
-        <di:waypoint x="490" y="140" />
-        <di:waypoint x="520" y="140" />
+      <bpmndi:BPMNEdge id="Flow_Start_di" bpmnElement="Flow_Start">
+        <di:waypoint x="178" y="168" />
+        <di:waypoint x="226" y="169" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flow5_di" bpmnElement="flow5">
-        <di:waypoint x="620" y="140" />
-        <di:waypoint x="635" y="140" />
-        <di:waypoint x="635" y="230" />
-        <di:waypoint x="650" y="230" />
+      <bpmndi:BPMNEdge id="Flow_Auth_di" bpmnElement="Flow_Auth">
+        <di:waypoint x="450" y="120" />
+        <di:waypoint x="475" y="120" />
+        <di:waypoint x="475" y="100" />
+        <di:waypoint x="520" y="100" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flow6_di" bpmnElement="flow6">
-        <di:waypoint x="460" y="290" />
-        <di:waypoint x="555" y="290" />
-        <di:waypoint x="555" y="250" />
-        <di:waypoint x="650" y="250" />
+      <bpmndi:BPMNEdge id="Flow_Choose_di" bpmnElement="Flow_Choose">
+        <di:waypoint x="620" y="120" />
+        <di:waypoint x="660" y="120" />
+        <di:waypoint x="660" y="200" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flowNotifyCreated_di" bpmnElement="flowNotifyCreated">
-        <di:waypoint x="770" y="250" />
-        <di:waypoint x="800" y="250" />
-        <di:waypoint x="800" y="270" />
-        <di:waypoint x="830" y="270" />
+      <bpmndi:BPMNEdge id="Flow_Call_di" bpmnElement="Flow_Call">
+        <di:waypoint x="480" y="270" />
+        <di:waypoint x="550" y="270" />
+        <di:waypoint x="550" y="240" />
+        <di:waypoint x="640" y="240" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flowWaitBeforeConfirm_di" bpmnElement="flowWaitBeforeConfirm">
-        <di:waypoint x="900" y="310" />
-        <di:waypoint x="900" y="336" />
-        <di:waypoint x="990" y="336" />
-        <di:waypoint x="990" y="362" />
+      <bpmndi:BPMNEdge id="Flow_Save_di" bpmnElement="Flow_Save">
+        <di:waypoint x="700" y="200" />
+        <di:waypoint x="700" y="108" />
+        <di:waypoint x="870" y="108" />
+        <di:waypoint x="870" y="128" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flowNotifyConfirmRequest_di" bpmnElement="flowNotifyConfirmRequest">
-        <di:waypoint x="1000" y="365" />
-        <di:waypoint x="1000" y="155" />
-        <di:waypoint x="1080" y="155" />
-        <di:waypoint x="1080" y="230" />
+      <bpmndi:BPMNEdge id="Flow_Notify_di" bpmnElement="Flow_Notify">
+        <di:waypoint x="940" y="186" />
+        <di:waypoint x="960" y="186" />
+        <di:waypoint x="960" y="259" />
+        <di:waypoint x="980" y="259" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flowToWait_di" bpmnElement="flowToWait">
-        <di:waypoint x="1100" y="230" />
-        <di:waypoint x="1100" y="210" />
-        <di:waypoint x="1230" y="210" />
-        <di:waypoint x="1230" y="230" />
+      <bpmndi:BPMNEdge id="Flow_Wait_di" bpmnElement="Flow_Wait">
+        <di:waypoint x="1015" y="258" />
+        <di:waypoint x="1043" y="258" />
+        <di:waypoint x="1043" y="241" />
+        <di:waypoint x="1070" y="241" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flowToGateway_di" bpmnElement="flowToGateway">
-        <di:waypoint x="1280" y="270" />
-        <di:waypoint x="1325" y="270" />
-        <di:waypoint x="1325" y="223" />
+      <bpmndi:BPMNEdge id="Flow_Request_di" bpmnElement="Flow_Request">
+        <di:waypoint x="1210" y="220" />
+        <di:waypoint x="1230" y="220" />
+        <di:waypoint x="1230" y="190" />
+        <di:waypoint x="1270" y="190" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flowTimeout_di" bpmnElement="flowTimeout">
-        <di:waypoint x="1325" y="223" />
-        <di:waypoint x="1325" y="362" />
+      <bpmndi:BPMNEdge id="Flow_Response_di" bpmnElement="Flow_Response">
+        <di:waypoint x="1370" y="190" />
+        <di:waypoint x="1425" y="190" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flowToConfirm_di" bpmnElement="flowToConfirm">
-        <di:waypoint x="1349" y="197" />
-        <di:waypoint x="1400" y="195" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flowAfterTimeout_di" bpmnElement="flowAfterTimeout">
-        <di:waypoint x="1343" y="380" />
-        <di:waypoint x="1392" y="380" />
-        <di:waypoint x="1392" y="330" />
-        <di:waypoint x="1440" y="330" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flow9_di" bpmnElement="flow9">
-        <di:waypoint x="1450" y="195" />
-        <di:waypoint x="1552" y="195" />
+      <bpmndi:BPMNEdge id="Flow_Confirmed_di" bpmnElement="Flow_Confirmed">
+        <di:waypoint x="1475" y="190" />
+        <di:waypoint x="1572" y="190" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1492" y="169" width="15" height="14" />
+          <dc:Bounds x="1541" y="164" width="15" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flow10_di" bpmnElement="flow10">
-        <di:waypoint x="1425" y="220" />
-        <di:waypoint x="1425" y="310" />
-        <di:waypoint x="1440" y="310" />
+      <bpmndi:BPMNEdge id="Flow_Rejected_di" bpmnElement="Flow_Rejected">
+        <di:waypoint x="1450" y="215" />
+        <di:waypoint x="1450" y="258" />
+        <di:waypoint x="1430" y="258" />
+        <di:waypoint x="1430" y="290" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1431" y="255" width="19" height="14" />
+          <dc:Bounds x="1424" y="233" width="19" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="flow14_di" bpmnElement="flow14">
-        <di:waypoint x="1560" y="330" />
-        <di:waypoint x="1591" y="330" />
-        <di:waypoint x="1591" y="362" />
-        <di:waypoint x="1622" y="362" />
+      <bpmndi:BPMNEdge id="Flow_Cancel_di" bpmnElement="Flow_Cancel">
+        <di:waypoint x="1490" y="330" />
+        <di:waypoint x="1530" y="330" />
+        <di:waypoint x="1530" y="298" />
+        <di:waypoint x="1572" y="298" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
